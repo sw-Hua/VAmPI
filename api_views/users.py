@@ -103,9 +103,9 @@ def token_validator(auth_header):
         try:
             auth_token = auth_header.split(" ")[1]
         except:
-            auth_token = ""
+            auth_token = ""  # nosec B105
     else:
-        auth_token = ""
+        auth_token = ""  # nosec B105
     if auth_token:
         # if auth_token is valid we get back the username of the user
         return User.decode_auth_token(auth_token)
@@ -156,7 +156,7 @@ def update_password(username):
                 return Response(error_message_helper("User Not Found"), 400, mimetype="application/json")
             responseObject = {
                 'status': 'success',
-                'Password': 'Updated.'
+                'Password': 'Updated.'  # nosec B105
             }
             return Response(json.dumps(responseObject), 204, mimetype="application/json")
         else:
