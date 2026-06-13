@@ -59,28 +59,26 @@ jobs:
 
       - name: Safety Dependency Scan
         id: safety
-        if: ${{ secrets.SAFETY_API_KEY != '' }}
         run: |
-          echo "Running Safety dependency scan..."
-          safety check -r requirements.txt --key $SAFETY_API_KEY > safety_report.txt 2>&1
-          SAFETY_EXIT=$?
-          echo "=== Safety Report ==="
-          cat safety_report.txt
-          if [ $SAFETY_EXIT -ne 0 ]; then
-            echo "safety_failed=true" >> $GITHUB_OUTPUT
-            echo "WARNING: Safety found vulnerable dependencies"
+          if [ -n "$SAFETY_API_KEY" ]; then
+            echo "Running Safety dependency scan..."
+            safety check -r requirements.txt --key $SAFETY_API_KEY > safety_report.txt 2>&1
+            SAFETY_EXIT=$?
+            echo "=== Safety Report ==="
+            cat safety_report.txt
+            if [ $SAFETY_EXIT -ne 0 ]; then
+              echo "safety_failed=true" >> $GITHUB_OUTPUT
+              echo "WARNING: Safety found vulnerable dependencies"
+            else
+              echo "safety_failed=false" >> $GITHUB_OUTPUT
+              echo "PASS: No vulnerable dependencies found"
+            fi
           else
+            echo "SAFETY_API_KEY secret not configured. Skipping dependency vulnerability scan."
             echo "safety_failed=false" >> $GITHUB_OUTPUT
-            echo "PASS: No vulnerable dependencies found"
           fi
         env:
           SAFETY_API_KEY: ${{ secrets.SAFETY_API_KEY }}
-
-      - name: Safety Scan (Skipped)
-        if: ${{ secrets.SAFETY_API_KEY == '' }}
-        run: |
-          echo "SAFETY_API_KEY secret not configured. Skipping dependency vulnerability scan."
-          echo "safety_failed=false" >> $GITHUB_OUTPUT
 
       # ============================================================
       # Stage 3: AI Security Audit (Reserved)
