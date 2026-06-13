@@ -33,8 +33,8 @@ SEVERITY_ORDER = {"critical": 5, "high": 4, "medium": 3, "low": 2, "info": 1}
 FAIL_THRESHOLD = "high"  # HIGH and above will block the PR
 
 MAX_FILE_SIZE = 50000  # Skip files larger than 50KB
-REQUEST_TIMEOUT = 120  # seconds per API call
-REQUEST_GAP = 1  # seconds between API calls (rate limiting)
+REQUEST_TIMEOUT = 300  # seconds per API call (DeepSeek V4 Pro analysis takes time)
+REQUEST_GAP = 2  # seconds between API calls (rate limiting)
 
 
 # ======================== Helper Functions ========================
