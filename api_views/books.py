@@ -57,3 +57,20 @@ def get_by_title(book_title):
             return Response(json.dumps(responseObject), 200, mimetype="application/json")
         else:
             return Response(error_message_helper("Book not found!"), 404, mimetype="application/json")
+
+
+def get_books_paginated():
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+    if page < 1 or per_page < 1 or per_page > 100:
+        return Response(error_message_helper("Invalid pagination parameters"), 400, mimetype="application/json")
+    pagination = Book.query.paginate(page=page, per_page=per_page, error_out=False)
+    books_list = [Book.json(book) for book in pagination.items]
+    result = {
+        'books': books_list,
+        'total': pagination.total,
+        'page': page,
+        'per_page': per_page,
+        'pages': pagination.pages
+    }
+    return Response(json.dumps(result), 200, mimetype="application/json")
