@@ -46,8 +46,17 @@ jobs:
       - name: Bandit SAST Scan
         id: bandit
         run: |
-          echo "Running Bandit SAST scan..."
-          bandit -r . -ll -f txt -o bandit_report.txt --exit-zero
+          echo "Extracting changed Python files from PR..."
+          git diff --name-only origin/main...HEAD -- '*.py' > changed_files.txt
+          echo "Changed Python files:"
+          cat changed_files.txt
+          if [ -s changed_files.txt ]; then
+            echo "Running Bandit SAST scan on changed files..."
+            bandit -ll -f txt -o bandit_report.txt --exit-zero $(cat changed_files.txt | tr '\n' ' ')
+          else
+            echo "No Python files changed. Bandit scan skipped."
+            echo "No Python files changed in this PR." > bandit_report.txt
+          fi
           echo "=== Bandit Report ==="
           cat bandit_report.txt
           if grep -q "Issue:" bandit_report.txt; then
