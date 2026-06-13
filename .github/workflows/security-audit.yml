@@ -52,9 +52,9 @@ jobs:
           if [ -s changed_files.txt ]; then
             echo "Running Bandit SAST scan on changed files..."
             # Use JSON output for reliable issue counting (text formatter omits LOW severity issues)
-            bandit -ll -f json -o bandit_report.json --exit-zero $(cat changed_files.txt | tr '\n' ' ')
+            bandit -l -f json -o bandit_report.json --exit-zero $(cat changed_files.txt | tr '\n' ' ')
             # Also generate text report for PR comment readability
-            bandit -ll -f txt -o bandit_report.txt --exit-zero $(cat changed_files.txt | tr '\n' ' ')
+            bandit -l -f txt -o bandit_report.txt --exit-zero $(cat changed_files.txt | tr '\n' ' ')
           else
             echo "No Python files changed. Bandit scan skipped."
             echo "No Python files changed in this PR." > bandit_report.txt
