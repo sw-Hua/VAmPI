@@ -10,7 +10,7 @@ SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(app_instance.app.root_path
 app_instance.app.config['SQLALCHEMY_DATABASE_URI'] = SQLALCHEMY_DATABASE_URI
 app_instance.app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-app_instance.app.config['SECRET_KEY'] = 'random'
+app_instance.app.config['SECRET_KEY'] = 'my-secret-key-2024'
 # start the db
 db = SQLAlchemy(app_instance.app)
 
