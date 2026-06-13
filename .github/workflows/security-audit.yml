@@ -2,8 +2,11 @@ name: Security Audit on Pull Request
 
 on:
   pull_request:
-    branches:
-      - main
+    branches: [main]
+
+permissions:
+  pull-requests: write
+  contents: read
 
 jobs:
   security-audit:
@@ -14,64 +17,142 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Extract PR diff
-        run: |
-          echo "Extracting PR diff against main..."
-          git diff origin/main...HEAD > pr_diff.txt
-          echo "Diff extracted to pr_diff.txt"
-          wc -l pr_diff.txt
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
 
-      - name: Invoke Security Audit Agent
-        run: |
-          echo "========================================="
-          echo "  Security Audit Agent - PLACEHOLDER"
-          echo "========================================="
-          echo ""
-          echo "  TODO: Integrate AI security audit agent here."
-          echo "  The agent should analyze pr_diff.txt and return:"
-          echo "    1. List of detected vulnerabilities"
-          echo "    2. Severity rating per finding"
-          echo "    3. Overall PASS/FAIL assessment"
-          echo ""
-          echo "  Example integration:"
-          echo "    - Claude Code CLI audit"
-          echo "    - DeepAudit analysis"
-          echo "    - Custom LLM-based review"
-          echo ""
-          echo "========================================="
-          # TODO: Replace with actual agent call
-          # e.g.: claude-code audit --diff pr_diff.txt --output audit-result.json
+      # ============================================================
+      # Stage 1: Basic Checks
+      # ============================================================
+      - name: Install dependencies
+        run: pip install -r requirements.txt
 
-      - name: Comment result on PR
+      - name: Verify application starts
         run: |
-          echo "========================================="
-          echo "  PR Comment - PLACEHOLDER"
-          echo "========================================="
-          echo ""
-          echo "  TODO: Post audit results as a PR comment."
-          echo "  Options:"
-          echo "    - GitHub CLI: gh pr comment ${{ github.event.pull_request.number }} --body '...'"
-          echo "    - actions/github-script API"
-          echo "    - Custom bot integration"
-          echo ""
-          echo "========================================="
-          # TODO: Replace with actual comment logic
-          # e.g.: gh pr comment $PR_NUMBER --body "$(cat audit-summary.md)"
+          python app.py &
+          APP_PID=$!
+          sleep 3
+          curl -sf http://localhost:5000/ > /dev/null || { kill $APP_PID 2>/dev/null; exit 1; }
+          kill $APP_PID 2>/dev/null
 
-      - name: CI Pass/Fail Gate
+      # ============================================================
+      # Stage 2: Security Scanning
+      # ============================================================
+      - name: Install security tools
+        run: pip install bandit safety
+
+      - name: Bandit SAST Scan
+        id: bandit
         run: |
-          echo "========================================="
-          echo "  CI Gate - PLACEHOLDER"
-          echo "========================================="
+          echo "Running Bandit SAST scan..."
+          bandit -r . -ll -f txt -o bandit_report.txt --exit-zero
+          echo "=== Bandit Report ==="
+          cat bandit_report.txt
+          if grep -q "Issue:" bandit_report.txt; then
+            echo "bandit_failed=true" >> $GITHUB_OUTPUT
+            echo "WARNING: Bandit found security issues"
+          else
+            echo "bandit_failed=false" >> $GITHUB_OUTPUT
+            echo "PASS: No bandit issues found"
+          fi
+
+      - name: Safety Dependency Scan
+        id: safety
+        if: ${{ secrets.SAFETY_API_KEY != '' }}
+        run: |
+          echo "Running Safety dependency scan..."
+          safety check -r requirements.txt --key $SAFETY_API_KEY > safety_report.txt 2>&1
+          SAFETY_EXIT=$?
+          echo "=== Safety Report ==="
+          cat safety_report.txt
+          if [ $SAFETY_EXIT -ne 0 ]; then
+            echo "safety_failed=true" >> $GITHUB_OUTPUT
+            echo "WARNING: Safety found vulnerable dependencies"
+          else
+            echo "safety_failed=false" >> $GITHUB_OUTPUT
+            echo "PASS: No vulnerable dependencies found"
+          fi
+        env:
+          SAFETY_API_KEY: ${{ secrets.SAFETY_API_KEY }}
+
+      - name: Safety Scan (Skipped)
+        if: ${{ secrets.SAFETY_API_KEY == '' }}
+        run: |
+          echo "SAFETY_API_KEY secret not configured. Skipping dependency vulnerability scan."
+          echo "safety_failed=false" >> $GITHUB_OUTPUT
+
+      # ============================================================
+      # Stage 3: AI Security Audit (Reserved)
+      # ============================================================
+      - name: AI Security Audit
+        run: |
+          echo "============================================"
+          echo "  AI Security Audit - RESERVED FOR PROMPT 3"
+          echo "============================================"
           echo ""
-          echo "  TODO: Based on audit results, decide whether"
-          echo "  to pass (green) or fail (red) the CI check."
+          # TODO: AI Agent 接入点（Prompt 3 补全）
+          # 运行方式：调用 Claude API 或 DeepAudit
+          # 输入：PR diff（git diff origin/main...HEAD > pr_diff.txt）
+          # 输出：audit_result.json，包含 risk_level 和 findings
+          # 判断逻辑：risk_level == HIGH -> exit 1，Block 合并
+          # 需要提前存入 GitHub Secrets：CLAUDE_API_KEY
+          echo "AI audit skipped (not yet integrated)"
+
+      # ============================================================
+      # Results & PR Comment
+      # ============================================================
+      - name: Build PR Comment
+        id: report
+        run: |
+          echo "## Security Audit Report" > pr_comment.md
+          echo "" >> pr_comment.md
+          echo "### Bandit SAST Scan" >> pr_comment.md
+          echo '```' >> pr_comment.md
+          cat bandit_report.txt >> pr_comment.md
+          echo '```' >> pr_comment.md
+          echo "" >> pr_comment.md
+          echo "### Safety Dependency Scan" >> pr_comment.md
+          if [ -f safety_report.txt ]; then
+            echo '```' >> pr_comment.md
+            cat safety_report.txt >> pr_comment.md
+            echo '```' >> pr_comment.md
+          else
+            echo "_SAFETY_API_KEY not configured - dependency scan skipped_" >> pr_comment.md
+          fi
+          echo "" >> pr_comment.md
+          echo "### AI Security Audit" >> pr_comment.md
+          echo "_Not yet integrated (reserved for Prompt 3)_" >> pr_comment.md
+
+      - name: Post Comment to PR
+        if: github.event_name == 'pull_request'
+        run: |
+          gh pr comment ${{ github.event.pull_request.number }} --body-file pr_comment.md
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ============================================================
+      # CI Gate
+      # ============================================================
+      - name: CI Gate
+        run: |
+          FAILED=false
+          if [ "${{ steps.bandit.outputs.bandit_failed }}" = "true" ]; then
+            echo "FAIL: Bandit found code security issues"
+            FAILED=true
+          else
+            echo "PASS: Bandit - no issues found"
+          fi
+          if [ "${{ steps.safety.outputs.safety_failed }}" = "true" ]; then
+            echo "FAIL: Safety found vulnerable dependencies"
+            FAILED=true
+          else
+            echo "PASS: Safety - no vulnerable dependencies"
+          fi
+          if [ "$FAILED" = "true" ]; then
+            echo ""
+            echo "=== CI GATE: RED (Security issues detected) ==="
+            exit 1
+          fi
           echo ""
-          echo "  If critical/high severity vulnerabilities found:"
-          echo "    exit 1  (CI goes RED)"
-          echo "  Else:"
-          echo "    exit 0  (CI goes GREEN)"
-          echo ""
-          echo "========================================="
-          # TODO: Replace with actual gate logic
-          # Parsing audit result JSON and conditionally exit
+          echo "=== CI GATE: GREEN (All checks passed) ==="
