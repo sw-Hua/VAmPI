@@ -1,0 +1,77 @@
+name: Security Audit on Pull Request
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  security-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract PR diff
+        run: |
+          echo "Extracting PR diff against main..."
+          git diff origin/main...HEAD > pr_diff.txt
+          echo "Diff extracted to pr_diff.txt"
+          wc -l pr_diff.txt
+
+      - name: Invoke Security Audit Agent
+        run: |
+          echo "========================================="
+          echo "  Security Audit Agent - PLACEHOLDER"
+          echo "========================================="
+          echo ""
+          echo "  TODO: Integrate AI security audit agent here."
+          echo "  The agent should analyze pr_diff.txt and return:"
+          echo "    1. List of detected vulnerabilities"
+          echo "    2. Severity rating per finding"
+          echo "    3. Overall PASS/FAIL assessment"
+          echo ""
+          echo "  Example integration:"
+          echo "    - Claude Code CLI audit"
+          echo "    - DeepAudit analysis"
+          echo "    - Custom LLM-based review"
+          echo ""
+          echo "========================================="
+          # TODO: Replace with actual agent call
+          # e.g.: claude-code audit --diff pr_diff.txt --output audit-result.json
+
+      - name: Comment result on PR
+        run: |
+          echo "========================================="
+          echo "  PR Comment - PLACEHOLDER"
+          echo "========================================="
+          echo ""
+          echo "  TODO: Post audit results as a PR comment."
+          echo "  Options:"
+          echo "    - GitHub CLI: gh pr comment ${{ github.event.pull_request.number }} --body '...'"
+          echo "    - actions/github-script API"
+          echo "    - Custom bot integration"
+          echo ""
+          echo "========================================="
+          # TODO: Replace with actual comment logic
+          # e.g.: gh pr comment $PR_NUMBER --body "$(cat audit-summary.md)"
+
+      - name: CI Pass/Fail Gate
+        run: |
+          echo "========================================="
+          echo "  CI Gate - PLACEHOLDER"
+          echo "========================================="
+          echo ""
+          echo "  TODO: Based on audit results, decide whether"
+          echo "  to pass (green) or fail (red) the CI check."
+          echo ""
+          echo "  If critical/high severity vulnerabilities found:"
+          echo "    exit 1  (CI goes RED)"
+          echo "  Else:"
+          echo "    exit 0  (CI goes GREEN)"
+          echo ""
+          echo "========================================="
+          # TODO: Replace with actual gate logic
+          # Parsing audit result JSON and conditionally exit
