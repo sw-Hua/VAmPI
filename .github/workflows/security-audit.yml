@@ -97,21 +97,20 @@ jobs:
           SAFETY_API_KEY: ${{ secrets.SAFETY_API_KEY }}
 
       # ============================================================
-      # Stage 3: AI Security Audit (Reserved)
+      # Stage 3: DeepAudit AI Security Audit
       # ============================================================
-      - name: AI Security Audit
+      - name: DeepAudit AI Security Audit
+        id: deepaudit
         run: |
           echo "============================================"
-          echo "  AI Security Audit - RESERVED FOR PROMPT 3"
+          echo "  DeepAudit AI Security Audit"
           echo "============================================"
-          echo ""
-          # TODO: AI Agent 接入点（Prompt 3 补全）
-          # 运行方式：调用 Claude API 或 DeepAudit
-          # 输入：PR diff（git diff origin/main...HEAD > pr_diff.txt）
-          # 输出：audit_result.json，包含 risk_level 和 findings
-          # 判断逻辑：risk_level == HIGH -> exit 1，Block 合并
-          # 需要提前存入 GitHub Secrets：CLAUDE_API_KEY
-          echo "AI audit skipped (not yet integrated)"
+          pip install requests
+          python deepaudit_review.py
+        env:
+          DEEPAUDIT_URL: ${{ secrets.DEEPAUDIT_URL }}
+          DEEPAUDIT_EMAIL: ${{ secrets.DEEPAUDIT_EMAIL }}
+          DEEPAUDIT_PASSWORD: ${{ secrets.DEEPAUDIT_PASSWORD }}
 
       # ============================================================
       # Results & PR Comment
@@ -119,7 +118,7 @@ jobs:
       - name: Build PR Comment
         id: report
         run: |
-          echo "## Security Audit Report" > pr_comment.md
+          echo "## 🔒 Security Audit Report" > pr_comment.md
           echo "" >> pr_comment.md
           echo "### Bandit SAST Scan" >> pr_comment.md
           echo '```' >> pr_comment.md
@@ -135,8 +134,13 @@ jobs:
             echo "_SAFETY_API_KEY not configured - dependency scan skipped_" >> pr_comment.md
           fi
           echo "" >> pr_comment.md
-          echo "### AI Security Audit" >> pr_comment.md
-          echo "_Not yet integrated (reserved for Prompt 3)_" >> pr_comment.md
+          # Append DeepAudit report
+          if [ -f deepaudit_report.md ]; then
+            cat deepaudit_report.md >> pr_comment.md
+          else
+            echo "### 🛡️ DeepAudit AI Security Audit" >> pr_comment.md
+            echo "_DeepAudit analysis did not produce a report_" >> pr_comment.md
+          fi
 
       - name: Post Comment to PR
         if: github.event_name == 'pull_request'
@@ -162,6 +166,12 @@ jobs:
             FAILED=true
           else
             echo "PASS: Safety - no vulnerable dependencies"
+          fi
+          if [ "${{ steps.deepaudit.outputs.deepaudit_failed }}" = "true" ]; then
+            echo "FAIL: DeepAudit found HIGH/CRITICAL vulnerabilities"
+            FAILED=true
+          else
+            echo "PASS: DeepAudit - no blocking issues"
           fi
           if [ "$FAILED" = "true" ]; then
             echo ""
