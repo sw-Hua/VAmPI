@@ -51,14 +51,21 @@ jobs:
           cat changed_files.txt
           if [ -s changed_files.txt ]; then
             echo "Running Bandit SAST scan on changed files..."
+            # Use JSON output for reliable issue counting (text formatter omits LOW severity issues)
+            bandit -ll -f json -o bandit_report.json --exit-zero $(cat changed_files.txt | tr '\n' ' ')
+            # Also generate text report for PR comment readability
             bandit -ll -f txt -o bandit_report.txt --exit-zero $(cat changed_files.txt | tr '\n' ' ')
           else
             echo "No Python files changed. Bandit scan skipped."
             echo "No Python files changed in this PR." > bandit_report.txt
+            echo '{"results":[]}' > bandit_report.json
           fi
-          echo "=== Bandit Report ==="
+          echo "=== Bandit Report (text) ==="
           cat bandit_report.txt
-          if grep -q "Issue:" bandit_report.txt; then
+          # Parse JSON to count actual issues (catches LOW severity that text formatter hides)
+          ISSUE_COUNT=$(python3 -c "import json; d=json.load(open('bandit_report.json')); print(len(d['results']))")
+          echo "Bandit found ${ISSUE_COUNT} issue(s)"
+          if [ "$ISSUE_COUNT" -gt 0 ]; then
             echo "bandit_failed=true" >> $GITHUB_OUTPUT
             echo "WARNING: Bandit found security issues"
           else
