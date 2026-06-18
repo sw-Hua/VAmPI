@@ -648,3 +648,53 @@ paths:
                   message:
                     type: string
                     example: 'Book not found!'
+  /books/v1/paginated:
+    get:
+      tags:
+        - books
+      summary: Retrieves books with pagination support
+      description: Returns a paginated list of books with total count and page metadata
+      operationId: api_views.books.get_books_paginated
+      parameters:
+        - name: page
+          in: query
+          description: Page number (1-based)
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          description: Number of items per page (max 100)
+          required: false
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Paginated book list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  books:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        book_title:
+                          type: string
+                        user:
+                          type: string
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  per_page:
+                    type: integer
+                  pages:
+                    type: integer
+        '400':
+          description: Invalid pagination parameters
+          content: {}
