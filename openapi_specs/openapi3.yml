@@ -648,3 +648,41 @@ paths:
                   message:
                     type: string
                     example: 'Book not found!'
+  /books/v1/search:
+    get:
+      tags:
+        - books
+      summary: Search books by title keyword
+      description: Returns books whose titles match the given search keyword
+      operationId: api_views.books.search_books
+      parameters:
+        - name: q
+          in: query
+          description: Search keyword for book titles (max 100 chars)
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  keyword:
+                    type: string
+                  count:
+                    type: integer
+                  books:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        book_title:
+                          type: string
+                        user:
+                          type: string
+        '400':
+          description: Invalid search parameters
+          content: {}

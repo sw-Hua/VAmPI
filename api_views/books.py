@@ -57,3 +57,17 @@ def get_by_title(book_title):
             return Response(json.dumps(responseObject), 200, mimetype="application/json")
         else:
             return Response(error_message_helper("Book not found!"), 404, mimetype="application/json")
+
+
+def search_books():
+    keyword = request.args.get('q', '', type=str)
+    if not keyword or len(keyword) > 100:
+        return Response(error_message_helper("Please provide a search keyword (max 100 chars)"), 400, mimetype="application/json")
+    results = Book.query.filter(Book.book_title.contains(keyword)).all()
+    books_list = [Book.json(book) for book in results]
+    result = {
+        'keyword': keyword,
+        'count': len(books_list),
+        'books': books_list
+    }
+    return Response(json.dumps(result), 200, mimetype="application/json")
