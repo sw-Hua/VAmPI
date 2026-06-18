@@ -46,8 +46,7 @@ def get_by_title(book_title):
     if "error" in resp:
         return Response(error_message_helper(resp), 401, mimetype="application/json")
     else:
-        user = User.query.filter_by(username=resp['sub']).first()
-        book = Book.query.filter_by(user=user, book_title=str(book_title)).first()
+        book = Book.query.filter_by(book_title=str(book_title)).first()
         if book:
             responseObject = {
                 'book_title': book.book_title,
